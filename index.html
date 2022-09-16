@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+             <script src='https://cdnjs.cloudflare.com/ajax/libs/brain/0.6.3/brain.js'></script>
+           <script src="https://cdn.rawgit.com/BrainJS/brain.js/45ce6ffc/browser.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+  <link rel="apple-touch-icon" sizes="76x76" href="./assets/img/apple-icon.png">
+  <link rel="icon" type="image/png" href="./assets/img/favicon.png">
+  <title>
+    Blk• CNN Ağı ile Veri sınıflandırma
+  </title>
+  <!--     Fonts and icons     -->
+  <link href="https://fonts.googleapis.com/css?family=Poppins:200,300,400,600,700,800" rel="stylesheet" />
+  <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
+  <!-- Nucleo Icons -->
+  <link href="./assets/css/nucleo-icons.css" rel="stylesheet" />
+  <!-- CSS Files -->
+  <link href="./assets/css/blk-design-system.css?v=1.0.0" rel="stylesheet" />
+  <!-- CSS Just for demo purpose, don't include it in your project -->
+  <link href="./assets/demo/demo.css" rel="stylesheet" />
+<style type="text/css">
+  
+
+  .neon {
+  padding: .3rem;
+  border: 0.2rem solid #fff;
+  border-radius: .3rem;
+  color: #fff;
+  box-shadow:
+    0 0 .3rem #fff,
+    inset 0 0 .3rem #fff,
+    0 0 1rem #08f,
+    inset 0 0 1rem #08f,
+    0 0 2.5rem #08f,
+    inset 0 0 2.5rem #08f;        
+    }    
+    .neon::-moz-selection {
+        background-color: #08f;  
+    }
+    .neon::selection {
+        background-color: #08f;
+    }
+    .neon:focus {
+        outline: none;
+    }
+    .card {
+          background: #86ada821;
+          box-shadow: 5px 15px 20px 10px rgba(0, 0, 0, 0.1);
+          
+    }
+    .modal-content {
+      background-color: #FF9800;
+    }
+</style>
+
+
+
+
+<script>
+     var dizi = [];
+        function DrawableCanvas(el) {
+            const px = 5
+            const ctx = el.getContext('2d')
+            let x = []
+            let y = []
+            let moves = []
+            let isPainting = false
+
+            const clear = () => ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+
+            const addPoint = (_x, _y, isMoving) => {
+                x.push(_x)
+                y.push(_y)
+                moves.push(isMoving)
+            }
+
+            const redraw = () => {
+                clear()
+
+                // ctx.strokeStyle = 'yellow'
+                // ctx.lineJoin = 'round'
+                // ctx.lineWidth = px
+//********************************************************
+
+                ctx.strokeStyle = document.getElementById('renk').innerHTML
+                ctx.lineJoin = 'round'
+                ctx.lineWidth = px
+                // alert(document.getElementById('renk').innerHTML)
+
+//**********************************************************
+                for (let i = 0; i < moves.length; i++) {
+                    ctx.beginPath()
+                    if (moves[i] && i) {
+                        ctx.moveTo(x[i - 1], y[i - 1])
+                    } else {
+                        ctx.moveTo(x[i] - 1, y[i])
+                    }
+                    ctx.lineTo(x[i], y[i])
+                    ctx.closePath()
+                    ctx.stroke()
+                }
+            }
+
+            const drawLine = (x1, y1, x2, y2, color = 'turquoise') => {
+                ctx.beginPath()
+                ctx.strokeStyle = color
+                ctx.lineJoin = 'miter'
+                ctx.lineWidth = 1
+                ctx.moveTo(x1, y1)
+                ctx.lineTo(x2, y2)
+                ctx.stroke()
+            }
+
+            const grid = () => {
+                const w = el.clientWidth
+                const h = el.clientHeight
+                const p = el.clientWidth / px
+                const xStep = w / p
+                const yStep = h / p
+
+                for(let x = 0; x < w; x += xStep) {
+                    drawLine(x, 0, x, h)
+                }
+                for(let y = 0; y < h; y += yStep) {
+                    drawLine(0, y, w, y)
+                }
+            }
+
+            const cell = (x, y, w, h) => {
+                ctx.fillStyle = 'green'
+                ctx.strokeStyle = 'green'
+                ctx.lineJoin = 'miter'
+                ctx.lineWidth = 1
+                ctx.rect(x, y, w, h)
+                ctx.fill()
+            }
+
+            this.reset = () => {
+                isPainting = false
+                x = []
+                y = []
+                moves = []
+                clear()
+            }
+
+            this.getVector = (debug = false) => {
+                const w = el.clientWidth
+                const h = el.clientHeight
+                const p = el.clientWidth / px
+                const xStep = w / p
+                const yStep = h / p
+                const vector = []
+                for(let x = 0; x < w; x += xStep) {
+                    for(let y = 0; y < h; y += yStep) {
+                        const data = ctx.getImageData(x, y, xStep, yStep)
+
+                        let nonEmptyPixelsCount = 0
+                        for(let i = 0; i < data.data.length; i += 4) {
+                            const isEmpty = data.data[i] === 0
+                            if (!isEmpty) {
+                                nonEmptyPixelsCount += 1
+                            }
+                        }
+
+                        if (nonEmptyPixelsCount > 1 && debug) {
+                            cell(x, y, xStep, yStep)
+                        }
+
+                        vector.push(nonEmptyPixelsCount > 1 ? 1 : 0)
+                    }
+                }
+
+                if (debug) {
+                    grid()
+                }
+                return vector
+            }
+
+            el.addEventListener('mousedown', event => {
+                const bounds = event.target.getBoundingClientRect()
+                const x = event.clientX - bounds.left
+                const y = event.clientY - bounds.top
+                isPainting = true
+                addPoint(x, y, false)
+                redraw()
+            })
+
+            el.addEventListener('mousemove', event => {
+                const bounds = event.target.getBoundingClientRect()
+                const x = event.clientX - bounds.left
+                const y = event.clientY - bounds.top
+                if (isPainting) {
+                    addPoint(x, y, true)
+                    redraw()
+                }
+            })
+
+            el.addEventListener('mouseup', () => {
+                isPainting = false
+            })
+
+            el.addEventListener('mouseleave', () => {
+                isPainting = false
+            })
+        }
+        function EkranaBas()
+{
+// alert(document.getElementById("birinci").value);
+document.getElementById('ilkmodel').innerHTML= document.getElementById("birinci").value;
+}
+function EkranaBas2()
+{
+// alert(document.getElementById("ikinci").value);
+document.getElementById('ilkmodel').innerHTML= document.getElementById("ikinci").value;
+}
+    </script>
+
+</head>
+
+<body class="index-page">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg fixed-top navbar-transparent " color-on-scroll="100">
+    <div class="container">
+      <div class="navbar-translate">
+        <a class="navbar-brand" href="https://demos.creative-tim.com/blk-design-system/index.html" rel="tooltip" title="Designed and Coded by Creative Tim" data-placement="bottom" target="_blank">
+          <span>BLK•</span> CNN Ağı ile Veri sınıflandırma
+        </a>
+        <button class="navbar-toggler navbar-toggler" type="button" data-toggle="collapse" data-target="#navigation" aria-controls="navigation-index" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-bar bar1"></span>
+          <span class="navbar-toggler-bar bar2"></span>
+          <span class="navbar-toggler-bar bar3"></span>
+        </button>
+      </div>
+      <div class="collapse navbar-collapse justify-content-end" id="navigation">
+        <div class="navbar-collapse-header">
+          <div class="row">
+            <div class="col-6 collapse-brand">
+              <a>
+                BLK•
+              </a>
+            </div>
+            <div class="col-6 collapse-close text-right">
+              <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navigation" aria-controls="navigation-index" aria-expanded="false" aria-label="Toggle navigation">
+                <i class="tim-icons icon-simple-remove"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <ul class="navbar-nav">
+          <li class="nav-item p-0">
+            <a class="nav-link" rel="tooltip" title="Follow us on Twitter" data-placement="bottom" href="https://twitter.com/CreativeTim" target="_blank">
+              <i class="fab fa-twitter"></i>
+              <p class="d-lg-none d-xl-none">Twitter</p>
+            </a>
+          </li>
+          <li class="nav-item p-0">
+            <a class="nav-link" rel="tooltip" title="Like us on Facebook" data-placement="bottom" href="https://www.facebook.com/CreativeTim" target="_blank">
+              <i class="fab fa-facebook-square"></i>
+              <p class="d-lg-none d-xl-none">Facebook</p>
+            </a>
+          </li>
+          <li class="nav-item p-0">
+            <a class="nav-link" rel="tooltip" title="Follow us on Instagram" data-placement="bottom" href="https://www.instagram.com/CreativeTimOfficial" target="_blank">
+              <i class="fab fa-instagram"></i>
+              <p class="d-lg-none d-xl-none">Instagram</p>
+            </a>
+          </li>
+          <li class="dropdown nav-item">
+            <a href="#" class="dropdown-toggle nav-link" data-toggle="dropdown">
+              <i class="fa fa-cogs d-lg-none d-xl-none"></i> Eğitmeye Başla
+            </a>
+          </li>
+          
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <!-- End Navbar -->
+  <div class="wrapper">
+    <div class="page-header header-filter">
+      <div class="squares square1 neon"></div>
+      <div class="squares square2 neon"></div>
+      <div class="squares square3 neon"></div>
+      <div class="squares square4 neon"></div>
+      <div class="squares square5 neon"></div>
+      <div class="squares square6 neon"></div>
+      <div class="squares square7 neon"></div>
+      <div class="container">
+        <div class="content-center brand">
+          <h1 class="h1-seo">Brain.Js•</h1>
+          <h3>Javascript ve CNN algoritması ile kullanıcı tarafından girilen verileri sınıflandıran ve Arka plan değiştikçe site içerisindeki canvas fırça ve site yazılarının renklerinin algılamasını en iyi şekile ayarlayan yapay zeka sistemi.</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="section section-basic" id="basic-elements">
+        <div class="container">
+          <h2 class="title" id="renk">white</h2>
+    <div class="header bg-gradient-primary pb-8 pt-5 pt-md-8">
+      <div class="container-fluid">
+        <div class="header-body">
+          <!-- Card stats -->
+          <div class="row">
+            <div class="col-xl-3 col-lg-6">
+              <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      Datanın adını giriniz
+                      <span class="h2 font-weight-bold mb-0">Data 1</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                        <i class='fab fa-blackberry' style='font-size:12px'></i>
+                      </div>
+                    </div>
+                  </div>
+                 <div class="form-group">
+                  <input type="text" value="" placeholder="Regular" class="form-control" id="birinci" name="ilk" />
+                </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-6">
+              <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <span class="badge badge-pill badge-primary">Örnek 1</span>
+                    </div>
+                   <!--  <div class="col-auto">
+                      <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                        <i class='fas fa-cogs' style='font-size:12px'></i>
+                      </div>
+                    </div> -->
+                  </div>
+                   <div id="kareler" style="width: 200px;height: 200px;">
+            <canvas id="p1" width="200" height="200" style="border: 1px solid black; cursor: default; display: block;"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-3 col-lg-6">
+              <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <span class="badge badge-primary">Örnek 2</span>
+  
+                    </div>
+                    <!-- <div class="col-auto">
+                      <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                        <i class='fas fa-cogs' style='font-size:12px'></i>
+                      </div>
+                    </div> -->
+                  </div>
+                   <canvas id="p2" width="200" height="200" style="border: 1px solid black; cursor: default; display: block;">
+                  <p class="mt-3 mb-0 text-muted text-sm">
+                    <span class="text-warning mr-2"><i class="fas fa-arrow-down"></i> 1.10%</span>
+                    <span class="text-nowrap">Since yesterday</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-3 col-lg-6">
+              <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                     <span class="badge badge-primary">Örnek 3</span>
+                    </div>
+                   <!--  <div class="col-auto">
+                      <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                        <i class='fas fa-cogs' style='font-size:12px'></i>
+                      </div>
+                    </div> -->
+
+                  </div>
+
+                  <div class="col-auto">
+                     <canvas id="p3" width="200" height="200" style="border: 1px solid black; cursor: default; display: block;">
+                    </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="header bg-gradient-primary pb-8 pt-5 pt-md-8">
+      <div class="container-fluid">
+        <div class="header-body">
+          <!-- Card stats -->
+          <div class="row">
+            <div class="col-xl-3 col-lg-6">
+              <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      Datanın adını giriniz
+                      <span class="h2 font-weight-bold mb-0">Data 2</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                        <i class='fab fa-blackberry' style='font-size:12px'></i>
+                      </div>
+                    </div>
+                  </div>
+                 <div class="form-group">
+                  <input type="text" value="" placeholder="Regular" class="form-control" id="ikinci" name="son"/>
+                </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-3 col-lg-6">
+              <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                       <span class="badge badge-primary">Örnek 1</span>
+                      
+                    </div>
+                    <!-- <div class="col-auto">
+                      <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                        <i class='fas fa-cogs' style='font-size:12px'></i>
+                      </div>
+                    </div> -->
+                  </div>
+                   <canvas id="n1" width="200" height="200" style="border: 1px solid black; cursor: default; display: block;">
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-3 col-lg-6">
+              <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <span class="badge badge-primary">Örnek 2</span>
+                      
+                    </div>
+                    <!-- <div class="col-auto">
+                      <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                        <i class='fas fa-cogs' style='font-size:12px'></i>
+                      </div>
+                    </div> -->
+                  </div>
+                   <canvas id="n2" width="200" height="200" style="border: 1px solid black; cursor: default; display: block;">
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-3 col-lg-6">
+              <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <span class="badge badge-primary">Örnek 3</span>
+                      
+                    </div>
+                   <!--  <div class="col-auto">
+                      <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                        <i class='fas fa-cogs' style='font-size:12px'></i>
+                      </div>
+                    </div> -->
+                  </div>
+                   <canvas id="n3" width="200" height="200" style="border: 1px solid black; cursor: default; display: block;" >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+<div class="row">
+  <div class="col-sm"></div>
+  <div class="col-sm neon" style="margin-top: 30px; margin-bottom: 30px">
+<table align="center">
+        <caption>
+            <h3>Adım 2: Train Model</h3>Adım 2: Modeli Eğit
+            <button id="train" class="btn btn-success"><i class="tim-icons icon-atom"></i>  Train</button>
+            <label><input type="checkbox" id="dbg" class="bootstrap-switch"/> Debug Ayıklama Modu</label>
+        </caption>
+        <tr>
+            <td align="center">
+                <table>
+                    <tbody id="res" style="display: none">
+                        <tr>
+                            <th>Error</th>
+                            <td id="err"></td>
+                        </tr>
+                        <tr>
+                            <th>Iterations</th>
+                            <td id="iterations"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+  </div>
+  <div class="col-sm"></div>
+</div>
+
+
+
+<div class="row">
+  <div class="col-3">
+    <div class="card card-stats mb-4 mb-xl-0">
+        <div class="card-body">
+            <div class="row">
+                <div class="col">
+                      <span class="badge badge-primary">Test</span>
+                </div>
+            </div>
+                <table align="center">
+                    <caption>
+                      <h3>Step 3: Evaluate Model</h3>Step 3: Evaluate Model
+                          <button id="guess" class="btn btn-danger" type="submit" data-toggle="modal" data-target="#exampleModal"><i class="tim-icons icon-atom"></i>Guess</button>
+                    </caption>
+                <tr>
+                    <td align="center">
+                        <canvas id="g" width="200" height="200" style="border: 1px solid black; cursor: default; display: block;"></canvas>
+                    </td>
+                </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+  <div class="col-9">
+        <div class="card card-chart card-plain">
+          <div class="card-header">
+            Grafik
+          </div>
+          <div class="card-body">
+            <div class="chart-area">
+              <canvas id="chartBig"></canvas>
+            </div>
+          </div>
+        </div>
+     <!--    <script type="text/javascript">
+          
+
+
+
+
+
+
+         
+        </script> -->
+    <!--  buraya grafik gelecek  -->
+<!-- Button trigger modal -->
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Tahmin Edilen</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="ilkmodel">
+        <h1 id="ilkmodelyazi"></h1>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+<!--* Card header *-->
+<!--* Card body *-->
+<!--* Card init *-->
+<div class="card">
+    <!-- Card header -->
+    <!-- Card body -->
+    <div class="card-body">   
+  Arka Plan Rengi Seçiniz: <br><br><input type="color" id="color"> <br><br>
+  Not: Bütün etiketler ve fırçalar rengini arka plana göre en iyi duruma getirecektir.   
+    </div>
+</div>
+
+
+
+
+<div id="chartSales" class="ct-chart "></div>
+          <div class="space-70"></div>
+          
+          <div class="space-70"></div>
+        </div>
+      </div>
+     
+    <footer class="footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-3">
+            <h1 class="title">BLK•</h1>
+          </div>
+          <div class="col-md-3">
+            <ul class="nav">
+              <li class="nav-item">
+                <a href="./index.html" class="nav-link">
+                  Home
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="./examples/landing-page.html" class="nav-link">
+                  Landing
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="./examples/register-page.html" class="nav-link">
+                  Register
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="./examples/profile-page.html" class="nav-link">
+                  Profile
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <ul class="nav">
+              <li class="nav-item">
+                <a href="https://creative-tim.com/contact-us" class="nav-link">
+                  İletişim
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="https://creative-tim.com/about-us" class="nav-link">
+                  Hakkında
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="https://creative-tim.com/blog" class="nav-link">
+                 Yasin AKGÜL
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="https://opensource.org/licenses/MIT" class="nav-link">
+                  Bitirme projesi 2019
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h3 class="title">Follow us:</h3>
+            <div class="btn-wrapper profile">
+              <a target="_blank" href="https://twitter.com/creativetim" class="btn btn-icon btn-neutral btn-round btn-simple" data-toggle="tooltip" data-original-title="Follow us">
+                <i class="fab fa-twitter"></i>
+              </a>
+              <a target="_blank" href="https://www.facebook.com/creativetim" class="btn btn-icon btn-neutral btn-round btn-simple" data-toggle="tooltip" data-original-title="Like us">
+                <i class="fab fa-facebook-square"></i>
+              </a>
+              <a target="_blank" href="https://dribbble.com/creativetim" class="btn btn-icon btn-neutral  btn-round btn-simple" data-toggle="tooltip" data-original-title="Follow us">
+                <i class="fab fa-dribbble"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+  <!--   Core JS Files   -->
+  <script src="./assets/js/core/jquery.min.js" type="text/javascript"></script>
+  <script src="./assets/js/core/popper.min.js" type="text/javascript"></script>
+  <script src="./assets/js/core/bootstrap.min.js" type="text/javascript"></script>
+  <script src="./assets/js/plugins/perfect-scrollbar.jquery.min.js"></script>
+   <script  src="./assets/js/index.js"></script>
+    <script src="./assets/js/plugins/chartjs.min.js"></script>
+  <!--  Plugin for Switches, full documentation here: http://www.jque.re/plugins/version3/bootstrap.switch/ -->
+  <script src="./assets/js/plugins/bootstrap-switch.js"></script>
+  <!--  Plugin for the Sliders, full documentation here: http://refreshless.com/nouislider/ -->
+  <script src="./assets/js/plugins/nouislider.min.js" type="text/javascript"></script>
+  <!-- Chart JS -->
+<!--   <script src="/assets/vendor/chart.js/dist/Chart.min.js"></script>
+<script src="/assets/vendor/chart.js/dist/Chart.extension.js"></script> -->
+  <!--  Plugin for the DatePicker, full documentation here: https://github.com/uxsolutions/bootstrap-datepicker -->
+  <script src="./assets/js/plugins/moment.min.js"></script>
+  <script src="./assets/js/plugins/bootstrap-datetimepicker.js" type="text/javascript"></script>
+  <!-- Black Dashboard DEMO methods, don't include it in your project! -->
+  <script src="./assets/demo/demo.js"></script>
+  <!-- Control Center for Black UI Kit: parallax effects, scripts for the example pages etc -->
+  <script src="./assets/js/blk-design-system.min.js?v=1.0.0" type="text/javascript"></script>
+<script>
+    $(document).ready(function() {
+      // Javascript method's body can be found in assets/assets-for-demo/js/demo.js
+      demo.initLandingPageChart();
+    });
+  </script>
+ <!--  <script>
+    $(document).ready(function() {
+      blackKit.initDatePicker();
+      blackKit.initSliders();
+    });
+
+
+    function scrollToDownload() {
+
+      if ($('.section-download').length != 0) {
+        $("html, body").animate({
+          scrollTop: $('.section-download').offset().top
+        }, 1000);
+      }
+    }
+    $(document).ready(function() {
+      // Javascript method's body can be found in assets/assets-for-demo/js/demo.js
+      demo.initLandingPageChart();
+    });
+  </script> -->
+</body>
+
+</html>
