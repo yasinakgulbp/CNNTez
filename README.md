@@ -1,6 +1,8 @@
 <h1 align="center">Hi 👋, Drawing recognition and classification with CNN convolutional neural network</h1>
 <h3 align="center">My Engineering Graduation Project</h3>
 
+![Backlog 1.1](https://github.com/yasinakgulbp/CNNTez/blob/main/assets/img/g%C3%B6r%C3%BCnt%C3%BC%205.PNG)
+
 - 🔭 I’m currently working on [Guard The Train](https://github.com/yasinakgulbp/GuardTheTrain)
 
 - 📫 How to reach me **yasinakgulbp@gmail.com**
@@ -16,4 +18,3 @@
 </p>
 
 
-![Backlog 1.1](https://github.com/yasinakgulbp/interBrainAstronaut96/blob/main/images/InterBrainAstronaut.png)
